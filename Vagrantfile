@@ -6,6 +6,9 @@
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
 Vagrant.configure(2) do |config|
+  config.vm.provider "parallels"
+  config.vm.provider "virtualbox"
+
   # The most common configuration options are documented and commented below.
   # For a complete reference, please see the online documentation at
   # https://docs.vagrantup.com.
@@ -51,6 +54,13 @@ Vagrant.configure(2) do |config|
   #   # Customize the amount of memory on the VM:
     vb.memory = "1536"
   end
+
+  config.vm.provider "parallels" do |prl|
+    prl.use_linked_clone = true
+    prl.update_guest_tools = true
+    # Customize the amount of memory on the VM:
+    prl.memory = "1536"
+  end
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -71,9 +81,22 @@ Vagrant.configure(2) do |config|
   # SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
+    type docker > /dev/null 2>&1 || { wget -qO- https://get.docker.com/ | sh; }
+
     docker pull sigita42/postgres-osm
     docker pull sigita42/postgres-osm-tools
 
     docker run -d --name postgres-osm -p 5432:5432 --restart always sigita42/postgres-osm
+
+    chmod +x /vagrant/osm2pgsql.sh
+
+    # to import lower austria
+    /vagrant/osm2pgsql.sh default.style lower_austria.pbf
+
+    # to download and import all of austria
+    #mkdir -p /vagrant/osm_data/autodownload
+    #cd /vagrant/osm_data/autodownload
+    #wget --progress=bar:force http://download.geofabrik.de/europe/austria-latest.osm.pbf
+    #/vagrant/osm2pgsql.sh default.style autodownload/austria-latest.osm.pbf
   SHELL
 end
